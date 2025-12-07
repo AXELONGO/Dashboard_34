@@ -1,235 +1,264 @@
-# Manual Técnico Detallado: DASHBOARD CON IA
+# Manual Técnico Maestro: DASHBOARD CON IA
 
-Este documento proporciona una explicación profunda de la arquitectura, estructura de archivos y funcionamiento del código del proyecto "DASHBOARD CON IA". Está diseñado para permitir que cualquier desarrollador entienda, mantenga y expanda el sistema.
+Este documento es la referencia definitiva del sistema. Cubre desde la arquitectura de alto nivel hasta la explicación línea por línea de la infraestructura, diseñado para capacitar completamente a un nuevo desarrollador o arquitecto de software.
 
 ---
 
 ## 1. Arquitectura del Sistema
 
-El proyecto utiliza una arquitectura de **Microservicios Contenerizados** orquestados con Docker Compose. Se divide en dos servicios principales:
+El sistema opera bajo una arquitectura de **Microservicios Contenerizados**. No es una aplicación monolítica; son piezas independientes que trabajan juntas.
 
-1.  **Frontend (Cliente)**: Aplicación React servida por Nginx.
-2.  **Backend (Servidor)**: API REST en Node.js/Express.
-
-### Diagrama de Flujo de Datos
+### Diagrama de Arquitectura Global
 
 ```mermaid
 graph TD
-    User[Usuario Final] -->|HTTP Puerto 8081| Nginx[Nginx (Frontend Container)]
-    
-    subgraph "Contenedor Frontend"
-        Nginx -->|Ruta /| ReactApp[React App (Archivos Estáticos)]
-        Nginx -->|Ruta /api/*| Proxy[Reverse Proxy]
+    subgraph "Cliente (Navegador)"
+        Browser[Navegador del Usuario]
+        PDFLib[Librería jsPDF (Generación Local)]
     end
-    
-    subgraph "Contenedor Backend"
-        Proxy -->|HTTP Puerto 3001| Express[Node.js Express Server]
+
+    subgraph "Servidor de Aplicaciones (Docker Host)"
+        Nginx[Nginx (Reverse Proxy & Web Server)]
+        ReactApp[React App (Archivos Estáticos)]
+        NodeServer[Node.js Backend API]
     end
+
+    subgraph "Servicios Externos (Nube)"
+        Notion[Notion API (Base de Datos)]
+        N8N[N8N (Automatización de Flujos)]
+    end
+
+    Browser -->|HTTP/HTTPS| Nginx
+    Nginx -->|Sirve Archivos| ReactApp
+    Nginx -->|Proxy /api| NodeServer
     
-    Express -->|HTTPS| NotionAPI[Notion API (Base de Datos)]
-    Express -->|HTTPS POST| N8N[N8N Webhook (Automatización)]
+    NodeServer -->|Lectura/Escritura| Notion
+    NodeServer -->|Webhook POST| N8N
+    
+    Browser -.->|Genera| PDFLib
+```
+
+### Relación Humano ↔ Aplicación
+
+```mermaid
+sequenceDiagram
+    participant Humano as Usuario
+    participant UI as Interfaz (React)
+    participant API as Backend (Node)
+    participant Ext as Servicios (Notion/N8N)
+
+    Humano->>UI: Ingresa a la URL
+    UI->>API: Solicita lista de Leads
+    API->>Ext: Consulta Base de Datos (Notion)
+    Ext-->>API: Retorna datos crudos
+    API-->>UI: Retorna JSON limpio
+    UI-->>Humano: Muestra Tabla de Clientes
+
+    Humano->>UI: Crea Cotización y da Clic en Enviar
+    UI->>API: Envía datos de cotización (POST)
+    API->>Ext: Dispara Webhook de Automatización (N8N)
+    Ext-->>API: Confirma recepción
+    API-->>UI: Confirma éxito
+    UI-->>Humano: Muestra alerta "Enviado Correctamente"
 ```
 
 ---
 
-## 2. Tecnologías y Librerías Clave
+## 2. Mapa de Estructura de Carpetas
 
-### Frontend
-*   **React 18**: Librería de UI basada en componentes.
-*   **Vite**: Build tool de última generación, mucho más rápido que Webpack.
-*   **Tailwind CSS**: Framework de estilos. Permite diseñar directamente en el HTML (JSX).
-*   **jsPDF & jspdf-autotable**: Generación de PDFs en el lado del cliente (navegador).
-*   **Lucide React / Material Symbols**: Iconografía.
+Este mapa explica qué hace cada rincón del proyecto.
 
-### Backend
-*   **Node.js & Express**: Servidor ligero y flexible.
-*   **@notionhq/client**: Cliente oficial para interactuar con Notion.
-*   **cors**: Middleware para permitir peticiones entre dominios (aunque Nginx maneja esto en producción).
-*   **dotenv**: Carga de variables de entorno seguras.
+```text
+/ (Raíz del Proyecto)
+├── .env                    # [SECRETO] Variables de entorno (Claves de API). NO SUBIR A GITHUB.
+├── docker-compose.yml      # Orquestador. Define cómo levantar Frontend y Backend juntos.
+├── nginx.conf              # Configuración del servidor web. Maneja el tráfico y el Proxy.
+├── package.json            # Dependencias del Frontend (React, Vite, Tailwind).
+├── index.html              # Punto de entrada de la aplicación web.
+├── vite.config.ts          # Configuración del empaquetador Vite.
+│
+├── backend/                # [MICROSERVICIO] Servidor API
+│   ├── Dockerfile          # Instrucciones para construir la imagen del servidor.
+│   ├── package.json        # Dependencias del Backend (Express, Notion Client).
+│   └── server.js           # Lógica del servidor. Rutas, validaciones y conexión a Notion.
+│
+├── src/                    # Código Fuente del Frontend
+│   ├── App.tsx             # Componente raíz. Decide qué mostrar (Ventas vs Cotizaciones).
+│   ├── main.tsx            # Punto de montaje de React en el DOM.
+│   │
+│   ├── components/         # Bloques de construcción de la UI
+│   │   ├── Header.tsx      # Barra superior.
+│   │   ├── QuotesView.tsx  # [CRÍTICO] Formulario de cotización y lógica de envío.
+│   │   ├── Chatbot.tsx     # Widget flotante de N8N.
+│   │   └── ... (Sidebars, etc.)
+│   │
+│   └── services/           # Lógica de Negocio (Sin UI)
+│       ├── notionService.ts # Funciones para hablar con nuestro Backend.
+│       ├── pdfService.ts    # Lógica matemática y visual para crear el PDF.
+│       └── geminiService.ts # (Experimental) Integración con IA.
+│
+└── public/                 # Archivos estáticos públicos (imágenes, favicons).
+```
 
 ---
 
-## 3. Explicación Detallada de Archivos
+## 3. Lógica de Negocio (Pseudocódigo)
 
-A continuación se describe cada archivo crítico y su función.
+### Proceso: Enviar Cotización (Webhook)
 
-### A. Infraestructura (`docker-compose.yml`)
-Este archivo define cómo se levantan los servicios.
+**Regla de Negocio**: Una cotización solo se envía si hay un cliente seleccionado y productos agregados.
+
+```pseudocode
+FUNCION EnviarCotizacion(cliente, productos):
+    SI cliente ES NULO O productos ESTA_VACIO:
+        RETORNAR Error("Faltan datos")
+
+    total = CALCULAR_TOTAL(productos)
+    
+    payload = {
+        "cliente": cliente.nombre,
+        "telefono": cliente.telefono,
+        "productos": productos,
+        "total": total,
+        "fecha": AHORA()
+    }
+
+    INTENTAR:
+        respuesta = HACER_POST("/api/webhook", payload)
+        SI respuesta.status == 200:
+            MOSTRAR_ALERTA("Éxito")
+            LIMPIAR_FORMULARIO()
+        SINO:
+            MOSTRAR_ERROR("Error en el servidor")
+    CAPTURAR Error:
+        MOSTRAR_ERROR("Fallo de red")
+FIN FUNCION
+```
+
+### Proceso: Generar Reporte Diario (PDF)
+
+**Regla de Negocio**: El reporte debe mostrar todas las actividades del día. Si una fecha es inválida, no debe romper el reporte, sino mostrar "--:--".
+
+```pseudocode
+FUNCION GenerarPDF(historial):
+    actividades_hoy = FILTRAR(historial, item => item.fecha == HOY)
+    
+    doc = NUEVO_PDF()
+    DIBUJAR_ENCABEZADO(doc, "Reporte Diario")
+    
+    PARA CADA item EN actividades_hoy:
+        hora = FORMATEAR_HORA(item.fecha)
+        
+        # Regla de Seguridad
+        SI hora CONTIENE "Invalid":
+            hora = "--:--"
+            
+        FILA = [hora, item.cliente, item.descripcion]
+        AGREGAR_TABLA(doc, FILA)
+        
+    GUARDAR_PDF(doc, "Reporte_Diario.pdf")
+FIN FUNCION
+```
+
+---
+
+## 4. Infraestructura Línea por Línea
+
+### `backend/Dockerfile`
+Este archivo crea la "computadora virtual" donde vive el servidor.
+
+```dockerfile
+FROM node:18-alpine           # 1. Usa una versión ligera de Linux con Node.js instalado.
+WORKDIR /app                  # 2. Crea una carpeta /app dentro del contenedor.
+COPY package*.json ./         # 3. Copia los archivos de dependencias.
+RUN npm install               # 4. Instala las librerías (Express, Notion, etc.).
+COPY . .                      # 5. Copia el resto del código (server.js).
+EXPOSE 3001                   # 6. Avisa que usará el puerto 3001.
+CMD ["node", "server.js"]     # 7. Comando de inicio: arranca el servidor.
+```
+
+### `docker-compose.yml`
+El director de orquesta.
 
 ```yaml
 version: '3.8'
 services:
-  erp-dashboard: # Servicio Frontend
-    build: .
+  erp-dashboard:              # Servicio 1: Frontend
+    build: .                  # Construye usando el Dockerfile de la raíz.
     ports:
-      - "8081:80" # Mapea puerto 8081 de tu PC al 80 del contenedor
+      - "8081:80"             # Conecta puerto 8081 (PC) -> 80 (Nginx).
     depends_on:
-      - backend # Espera a que el backend inicie
+      - backend               # Espera a que el backend arranque primero.
 
-  backend: # Servicio Backend
-    build: ./backend
+  backend:                    # Servicio 2: API
+    build: ./backend          # Construye usando backend/Dockerfile.
     ports:
-      - "3001:3001"
-    environment: # Pasa las claves secretas al contenedor
+      - "3001:3001"           # Conecta puerto 3001 (PC) -> 3001 (Node).
+    environment:              # Inyecta las claves secretas.
       - NOTION_API_KEY=${VITE_NOTION_API_KEY}
-      ...
-```
-
-### B. Configuración del Servidor Web (`nginx.conf`)
-Nginx es crucial porque une el Frontend y el Backend en un solo dominio aparente, evitando problemas de CORS.
-
-```nginx
-server {
-    listen 80;
-    
-    # Sirve la aplicación React
-    location / {
-        root /usr/share/nginx/html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Redirige las llamadas /api al contenedor del backend
-    location /api/ {
-        proxy_pass http://backend:3001/api/;
-    }
-}
-```
-
-### C. Backend (`backend/server.js`)
-Es el cerebro que protege tus claves de API. El Frontend nunca habla directo con Notion, habla con este archivo.
-
-**Ejemplo: Endpoint para obtener Leads**
-```javascript
-app.get('/api/leads', async (req, res) => {
-    // 1. Obtiene el ID de la base de datos de las variables de entorno
-    const databaseId = process.env.NOTION_DATABASE_ID;
-
-    try {
-        // 2. Consulta a Notion
-        const response = await notion.databases.query({
-            database_id: databaseId,
-            page_size: 100,
-        });
-
-        // 3. Limpia y formatea los datos para el Frontend
-        const cleanLeads = response.results.map(page => ({
-            id: page.id,
-            name: page.properties['Name']?.title[0]?.plain_text || 'Sin Nombre',
-            // ... más mapeo de datos
-        }));
-
-        res.json(cleanLeads); // 4. Responde al Frontend
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-```
-
-**Ejemplo: Proxy para Webhook (N8N)**
-Este endpoint recibe los datos del formulario y los reenvía a N8N.
-```javascript
-app.post('/api/webhook', async (req, res) => {
-    const webhookUrl = 'https://tu-n8n.com/webhook/...';
-    
-    // Reenvía la petición POST tal cual llega
-    const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
-    });
-    // ...
-});
-```
-
-### D. Frontend - Servicio de API (`services/notionService.ts`)
-Encapsula las llamadas al Backend. Si cambia la URL del backend, solo cambias este archivo.
-
-```typescript
-const API_BASE_URL = "/api"; // Nginx redirigirá esto
-
-export const getLeadsFromNotion = async (): Promise<Lead[]> => {
-    const response = await fetch(`${API_BASE_URL}/leads`);
-    if (!response.ok) throw new Error("Error fetching leads");
-    return await response.json();
-};
-```
-
-### E. Frontend - Vista de Cotizaciones (`components/QuotesView.tsx`)
-Maneja la lógica del formulario y el envío.
-
-**Lógica del Botón de Envío:**
-```typescript
-const handleSendWhatsApp = async () => {
-    setIsWhatsappLoading(true); // Muestra spinner
-    
-    // 1. Construye el objeto de datos (Payload)
-    const payload = {
-        cliente: selectedLead?.name,
-        telefono: selectedLead?.phone,
-        items: items, // Array de productos
-        total: calculateTotal(),
-        // ...
-    };
-
-    // 2. Envía al Backend (que enviará a N8N)
-    await fetch('/api/webhook', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    });
-    
-    setIsWhatsappLoading(false);
-};
-```
-
-### F. Frontend - Generación de PDF (`services/pdfService.ts`)
-Utiliza `jsPDF` para dibujar el reporte pixel por pixel.
-
-**Validación de Fechas (Corrección "Invalid Date"):**
-```typescript
-// Intenta parsear la fecha ISO
-if (item.isoDate) {
-    try {
-        timeStr = new Date(item.isoDate).toLocaleTimeString('es-MX', ...);
-    } catch (e) { ... }
-}
-
-// Regla de seguridad final
-if (timeStr.includes("Invalid")) {
-    timeStr = "--:--"; // Fallback seguro
-}
 ```
 
 ---
 
-## 4. Flujo de Trabajo (Workflow)
+## 5. GitHub y Control de Versiones
 
-### Paso 1: Inicio de la Aplicación
-Al ejecutar `docker compose up`, Docker construye las imágenes. El Backend se conecta a Notion y espera peticiones. El Frontend se compila y Nginx empieza a servirlo en el puerto 8081.
+El repositorio es el historial de vida del proyecto.
 
-### Paso 2: Interacción del Usuario
-El usuario entra a `localhost:8081`. React monta `App.tsx`.
-`App.tsx` llama a `getLeadsFromNotion()`.
-La petición viaja: `Navegador -> Nginx -> Backend -> Notion`.
-Los datos regresan y React renderiza la lista de clientes.
+*   **Rama `main`**: Es la versión "Sagrada". El código aquí siempre debe funcionar. Es lo que está en producción.
+*   **Commits**: Cada cambio guardado.
+    *   *Ejemplo*: "fix: corregir error de fecha en PDF"
+*   **Remote (`origin`)**: La copia del código en la nube (GitHub).
 
-### Paso 3: Envío de Cotización
-El usuario selecciona productos y da clic en "Envio de Cotizacion".
-React captura los datos y los envía a `/api/webhook`.
-El Backend recibe el JSON y lo envía a N8N.
-N8N recibe el JSON y dispara su flujo (ej. mandar mensaje de WhatsApp).
+**Flujo de Trabajo Estándar:**
+1.  `git pull origin main`: Bajar los últimos cambios de la nube.
+2.  *Hacer cambios en el código...*
+3.  `git add .`: Preparar los cambios.
+4.  `git commit -m "Descripción"`: Guardar los cambios en local.
+5.  `git push origin main`: Subir los cambios a la nube.
 
 ---
 
-## 5. Guía de Solución de Problemas (Troubleshooting)
+## 6. Guía de Despliegue (Deployment)
 
-### El botón de envío no hace nada
-*   **Causa probable**: Un elemento invisible está tapando el botón o hay un error de JavaScript silencioso.
-*   **Solución**: Se añadió un **Botón Flotante** de respaldo y alertas de depuración (`alert("DEBUG...")`). Si ves la alerta, el botón funciona y el error es del servidor.
+Para poner esto en internet (VPS como DigitalOcean, AWS, etc.):
 
-### Error "Invalid Date" en PDF
-*   **Causa**: Notion a veces devuelve fechas en formatos inconsistentes o nulos.
-*   **Solución**: El código ahora verifica explícitamente si la fecha es válida antes de escribirla en el PDF. Si falla, pone la hora actual o "--:--".
+1.  **Alquilar Servidor**: Obtén un servidor Ubuntu.
+2.  **Instalar Docker**:
+    ```bash
+    sudo apt update
+    sudo apt install docker.io docker-compose
+    ```
+3.  **Clonar Repositorio**:
+    ```bash
+    git clone https://github.com/TU_USUARIO/DASHBOARD.git
+    cd DASHBOARD
+    ```
+4.  **Configurar Secretos**:
+    Crear el archivo `.env` en el servidor (porque git no lo sube).
+    ```bash
+    nano .env
+    # Pegar tus claves API aquí
+    ```
+5.  **Lanzar**:
+    ```bash
+    sudo docker-compose up --build -d
+    ```
+    ¡Listo! Tu app estará disponible en la IP del servidor, puerto 8081.
 
-### No se ven los cambios en GitHub
-*   **Causa**: Estás trabajando en local. Git necesita que hagas `push` al servidor remoto.
-*   **Solución**: Ejecutar `git push origin main`. (Nota: El archivo `.env` está ignorado por seguridad, así que tus claves nunca se subirán).
+---
+
+## 7. Roadmap del Desarrollador
+
+Para dominar este proyecto, necesitas aprender estas tecnologías en este orden:
+
+1.  **HTML/CSS/JavaScript Moderno (ES6+)**: La base de todo. Entender `async/await`, desestructuración y módulos.
+2.  **React**: Entender Componentes, Props, State (`useState`) y Efectos (`useEffect`).
+3.  **Tailwind CSS**: Aprender las clases de utilidad para maquetar rápido sin escribir CSS tradicional.
+4.  **Node.js & Express**: Cómo crear una API simple, recibir JSON y responder.
+5.  **Docker**: Conceptos básicos de Contenedores, Imágenes y Volúmenes.
+6.  **Git**: Comandos básicos (`add`, `commit`, `push`, `pull`, `merge`).
+7.  **Nginx**: (Avanzado) Cómo configurar un servidor web y proxy reverso.
+
+---
+
+**Fin del Manual Técnico Maestro.**
