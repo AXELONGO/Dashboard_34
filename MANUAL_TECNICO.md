@@ -194,4 +194,172 @@ Aunque flexible, el código espera esta estructura rígida:
 
 ---
 
-**Esta es la totalidad del conocimiento técnico del proyecto.** Con este documento, tienes el control absoluto.
+## 11. Diagramas Técnicos Detallados
+
+A continuación se presentan los diagramas solicitados para la comprensión total del sistema.
+
+### 11.1 Flowcharts (Diagramas de Flujo)
+
+#### Proceso Principal: Envío de Cotización
+```mermaid
+flowchart TD
+    A[Inicio] --> B{¿Usuario seleccionó Cliente?}
+    B -- No --> C[Mostrar Alerta: Seleccione Cliente]
+    B -- Sí --> D{¿Hay Productos en Lista?}
+    D -- No --> E[Mostrar Alerta: Agregue Productos]
+    D -- Sí --> F[Calcular Totales]
+    F --> G[Construir JSON Payload]
+    G --> H[Enviar POST a /api/webhook]
+    H --> I{¿Respuesta Servidor 200 OK?}
+    I -- No --> J[Mostrar Error: Fallo de Red]
+    I -- Sí --> K[Mostrar Éxito]
+    K --> L[Limpiar Formulario]
+    L --> M[Fin]
+```
+
+#### Proceso de Error: Fallo en API Notion
+```mermaid
+flowchart TD
+    A[Backend recibe petición /api/leads] --> B[Intentar conectar a Notion]
+    B --> C{¿Conexión Exitosa?}
+    C -- Sí --> D[Procesar Datos]
+    C -- No --> E[Capturar Error (Catch)]
+    E --> F[Loguear Error en Consola]
+    F --> G[Responder 500 al Frontend]
+    G --> H[Frontend recibe error]
+    H --> I[Mostrar 'Error cargando datos' en UI]
+```
+
+### 11.2 Diagramas de Secuencia
+
+#### Flujo de Datos Completo (Usuario -> Sistema -> Nube)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Usuario
+    participant UI as Frontend (React)
+    participant API as Backend (Node)
+    participant Notion as Notion API
+    participant N8N as N8N Webhook
+
+    User->>UI: Abre la aplicación
+    UI->>API: GET /api/leads
+    API->>Notion: Query Database (ID)
+    Notion-->>API: Retorna JSON (Raw Data)
+    API-->>UI: Retorna JSON (Clean Data)
+    UI-->>User: Renderiza Tabla de Clientes
+
+    User->>UI: Clic en "Enviar Cotización"
+    UI->>API: POST /api/webhook (Datos Cotización)
+    API->>N8N: Forward POST (Datos)
+    N8N-->>API: 200 OK
+    API-->>UI: 200 OK
+    UI-->>User: Alerta "Enviado con éxito"
+```
+
+#### Inicio de Sesión (Implícito / Red)
+*Nota: No hay login explícito. La seguridad es por red.*
+```mermaid
+sequenceDiagram
+    actor User as Usuario
+    participant Firewall as Firewall/VPN
+    participant App as Aplicación
+
+    User->>Firewall: Intenta acceder a IP:8081
+    alt IP Autorizada
+        Firewall->>App: Permite Tráfico
+        App-->>User: Carga Interfaz
+    else IP No Autorizada
+        Firewall-->>User: Bloquea Conexión
+    end
+```
+
+### 11.3 Diagramas de Clases (Estructura de Datos)
+
+Aunque JavaScript no tiene clases estrictas, estas son las interfaces de datos (Types) que usamos.
+
+```mermaid
+classDiagram
+    class Lead {
+        +String id
+        +String name
+        +String phone
+        +String status
+        +String email
+    }
+
+    class QuoteItem {
+        +String description
+        +Number quantity
+        +Number unitPrice
+        +Number total
+    }
+
+    class HistoryItem {
+        +String id
+        +String description
+        +Date date
+        +String type
+    }
+
+    class BackendService {
+        +getLeads() Lead[]
+        +sendWebhook(payload) Boolean
+        +getHistory() HistoryItem[]
+    }
+
+    BackendService ..> Lead : Retorna
+    BackendService ..> HistoryItem : Retorna
+```
+
+### 11.4 Diagrama Entidad-Relación (Base de Datos Notion)
+
+```mermaid
+erDiagram
+    LEADS {
+        string ID PK "ID único de Notion"
+        string Name "Nombre del Cliente"
+        string Phone "Teléfono"
+        string Status "Estado (Nuevo, Contactado)"
+    }
+
+    HISTORY {
+        string ID PK "ID único de Notion"
+        string Description "Qué pasó"
+        date Date "Cuándo pasó"
+        string LeadID FK "Relación con Lead (Opcional)"
+    }
+
+    LEADS ||--o{ HISTORY : "tiene historial"
+```
+
+### 11.5 Diagrama de Arquitectura de Infraestructura
+
+```mermaid
+graph TB
+    subgraph "Servidor (VPS/Localhost)"
+        subgraph "Docker Compose"
+            direction TB
+            
+            subgraph "Contenedor: erp-dashboard"
+                Nginx[Nginx Web Server]
+                Static[React Build Files]
+            end
+            
+            subgraph "Contenedor: backend"
+                Express[Express API]
+                Env[Variables .env]
+            end
+            
+            Nginx -- "Puerto 3001 (Interno)" --> Express
+        end
+        
+        Port8081[Puerto Host: 8081] -- "Mapeo" --> Nginx
+    end
+    
+    Internet((Internet)) -- "Petición HTTP" --> Port8081
+```
+
+---
+
+**Fin del Manual Técnico Maestro.**
