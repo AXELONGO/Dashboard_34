@@ -1,10 +1,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Lead } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize lazily or safely
+const getAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("VITE_GEMINI_API_KEY is missing in .env");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const generateLeadsByLocation = async (location: string): Promise<Omit<Lead, 'id' | 'isSelected'>[]> => {
   try {
+    const ai = getAI();
+    if (!ai) return [];
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Generate 3 fictional but realistic business leads located in ${location}. 
@@ -36,3 +47,4 @@ export const generateLeadsByLocation = async (location: string): Promise<Omit<Le
     return [];
   }
 };
+

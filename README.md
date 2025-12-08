@@ -108,3 +108,16 @@ Run the following commands to install the new dependencies:
 npm install @react-oauth/google
 cd backend && npm install google-auth-library
 ```
+
+## Estructura de Carpetas
+
+A continuación se describe el propósito de las carpetas principales del proyecto:
+
+- **`backend/`**: Contiene el servidor Node.js/Express, la lógica de autenticación (Google Auth), y los endpoints de la API que comunican con Notion y otros servicios.
+- **`components/`**: Componentes de React que conforman la interfaz de usuario (UI), como el Dashboard, Login, Sidebar, etc.
+- **`services/`**: Capa de servicios del frontend para la comunicación con APIs externas y lógica de negocio (e.g., `notionService.ts`, `pdfService.ts`, `geminiService.ts`).
+- **`dist/`**: Contiene los archivos estáticos generados para producción por Vite (HTML, CSS, JS optimizados).
+- **`node_modules/`**: Dependencias del proyecto instaladas vía npm.
+- **`DASHBOARD-VTAS/`**: Directorio que parece contener referencias a una versión anterior o un submódulo (contiene su propio README).
+- **`temp_reference_repo/`**: Carpeta temporal que contiene archivos de referencia o backups (e.g., zips).
+

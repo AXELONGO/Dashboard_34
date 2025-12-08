@@ -1,14 +1,16 @@
 
 import React from 'react';
+import { LogOut, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   onToggleLeftSidebar: () => void;
   onToggleRightSidebar: () => void;
   activeTab: 'ventas' | 'cotizaciones';
   onTabChange: (tab: 'ventas' | 'cotizaciones') => void;
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleLeftSidebar, onToggleRightSidebar, activeTab, onTabChange }) => {
+const Header: React.FC<HeaderProps> = ({ onToggleLeftSidebar, onToggleRightSidebar, activeTab, onTabChange, onLogout }) => {
   return (
     <header className="flex-none flex items-center justify-between whitespace-nowrap border-b border-glass-border bg-black/20 backdrop-blur-xl px-4 md:px-6 py-4 z-20">
       <div className="flex items-center gap-4 text-white">
@@ -32,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleLeftSidebar, onToggleRightSideb
         <nav className="flex items-center gap-4 lg:gap-8">
           <button
             onClick={() => onTabChange('ventas')}
-            className={`text - sm font - medium leading - normal transition - all hover: text - glow px - 2 py - 1 relative ${activeTab === 'ventas' ? 'text-white' : 'text-gray-400 hover:text-white'} `}
+            className={`text-sm font-medium leading-normal transition-all hover:text-glow px-2 py-1 relative ${activeTab === 'ventas' ? 'text-white' : 'text-gray-400 hover:text-white'} `}
           >
             Ventas
             {activeTab === 'ventas' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white shadow-glow rounded-full"></span>}
@@ -40,14 +42,30 @@ const Header: React.FC<HeaderProps> = ({ onToggleLeftSidebar, onToggleRightSideb
 
           <button
             onClick={() => onTabChange('cotizaciones')}
-            className={`text - sm font - medium leading - normal transition - all hover: text - glow px - 2 py - 1 relative ${activeTab === 'cotizaciones' ? 'text-white' : 'text-gray-400 hover:text-white'} `}
+            className={`text-sm font-medium leading-normal transition-all hover:text-glow px-2 py-1 relative ${activeTab === 'cotizaciones' ? 'text-white' : 'text-gray-400 hover:text-white'} `}
           >
             Cotizaciones
             {activeTab === 'cotizaciones' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white shadow-glow rounded-full"></span>}
           </button>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            title="Refrescar Página"
+          >
+            <RefreshCw size={18} />
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-colors"
+            title="Cerrar Sesión"
+          >
+            <LogOut size={18} />
+          </button>
+
           {/* Mobile History Button - Only for Sales View */}
           {activeTab === 'ventas' && (
             <button

@@ -24,45 +24,19 @@ import Login from './components/Login';
 const FALLBACK_LEADS: Lead[] = [];
 const INITIAL_HISTORY: HistoryItem[] = [];
 
+interface DashboardProps {
+    user: any;
+    onLogout: () => void;
+}
 
-const AppContent: React.FC = () => {
-    const [user, setUser] = useState<any>(null);
-
-    // Check for existing session (optional, for persistence)
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user_session');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    }, []);
-
-    const handleLogin = (userData: any) => {
-        setUser(userData);
-        localStorage.setItem('user_session', JSON.stringify(userData));
-    };
-
-    const handleLogout = () => {
-        setUser(null);
-        localStorage.removeItem('user_session');
-    };
-
-    if (!user) {
-        return <Login onLoginSuccess={handleLogin} />;
-    }
-
+const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     // --- STATE: Data ---
-    // These states are no longer directly used by App.tsx's rendering logic
-    // as NotionDataViewer handles its own data.
-    // Keeping them commented out for now in case they are needed by other components
-    // or if the data flow changes later.
     const [leads, setLeads] = useState<Lead[]>([]);
     const [history, setHistory] = useState<HistoryItem[]>(INITIAL_HISTORY);
     const [globalHistory, setGlobalHistory] = useState<HistoryItem[]>([]);
 
     // --- STATE: UI & Async Status ---
     const [activeTab, setActiveTab] = useState<'ventas' | 'cotizaciones'>('ventas');
-    // These states are no longer directly used by App.tsx's rendering logic.
-    // Keeping them commented out for now.
     const [isSearching, setIsSearching] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isLoadingNotion, setIsLoadingNotion] = useState(true);
@@ -72,8 +46,6 @@ const AppContent: React.FC = () => {
     const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
     const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
-    // The useEffect hook for initial data loading is removed as NotionDataViewer
-    // now handles its own data fetching.
     useEffect(() => {
         const initData = async () => {
             setIsLoadingNotion(true);
@@ -112,8 +84,6 @@ const AppContent: React.FC = () => {
         initData();
     }, []);
 
-    // All lead-related functions (handleSearchLeads, toggleSelectLead, handleClassChange,
-    // handleSaveNote, handleExport) are removed as they are no longer used by the simplified App.tsx.
     const handleSearchLeads = async (location: string) => {
         setIsSearching(true);
         if (window.innerWidth < 1024) {
@@ -305,8 +275,8 @@ const AppContent: React.FC = () => {
                 onToggleRightSidebar={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                user={user} // Pass user to Header if needed
-                onLogout={handleLogout} // Pass logout handler
+                // user={user} // Pass user to Header if needed
+                onLogout={onLogout}
             />
 
             <div className="flex flex-col flex-1 overflow-hidden relative">
@@ -349,6 +319,34 @@ const AppContent: React.FC = () => {
             <Chatbot />
         </div>
     );
+};
+
+const AppContent: React.FC = () => {
+    const [user, setUser] = useState<any>(null);
+
+    // Check for existing session (optional, for persistence)
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user_session');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+    }, []);
+
+    const handleLogin = (userData: any) => {
+        setUser(userData);
+        localStorage.setItem('user_session', JSON.stringify(userData));
+    };
+
+    const handleLogout = () => {
+        setUser(null);
+        localStorage.removeItem('user_session');
+    };
+
+    if (!user) {
+        return <Login onLoginSuccess={handleLogin} />;
+    }
+
+    return <Dashboard user={user} onLogout={handleLogout} />;
 };
 
 const App: React.FC = () => {
