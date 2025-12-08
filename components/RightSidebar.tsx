@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { HistoryItem } from '../types';
 import { getHistoryFromNotionDatabase } from '../services/notionService';
@@ -20,10 +19,24 @@ const getIconForType = (type: string) => {
 };
 
 const RightSidebar: React.FC<RightSidebarProps> = ({ history, isOpen, onClose, leadName }) => {
-    const hasHistory = history.length > 0;
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [isDownloading, setIsDownloading] = useState(false);
+    const [filterClient, setFilterClient] = useState('');
+
+    // Extract unique clients for the dropdown
+    const uniqueClients = React.useMemo(() => {
+        const clients = history.map(item => item.clientName).filter((name): name is string => !!name && name !== 'Cliente Desconocido');
+        return Array.from(new Set(clients)).sort();
+    }, [history]);
+
+    // Filter history based on selection
+    const displayedHistory = React.useMemo(() => {
+        if (!filterClient) return history;
+        return history.filter(item => item.clientName === filterClient);
+    }, [history, filterClient]);
+
+    const hasHistory = displayedHistory.length > 0;
 
     const handleDownloadHistory = async () => {
         if (!startDate || !endDate) {
@@ -43,30 +56,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ history, isOpen, onClose, l
 
         setIsDownloading(true);
         try {
-            // Fetch filtered history directly from backend (which queries Notion)
-            // We pass undefined for leadId to get global history if no lead is selected,
-            // or we could filter by lead if leadName is present.
-            // However, the requirement seems to be "download history", likely global or contextual.
-            // Let's assume contextual if leadName is present, but the prompt says "historial de notas", implying global or current view.
-            // Since RightSidebar receives `history` prop which is already filtered by App.tsx logic,
-            // we might want to download *that* but with date filters?
-            // Actually, the user wants to "download specific days or periods".
-            // So we should probably fetch from backend with the date filters.
-
-            // Note: We don't have the leadId here easily unless we pass it.
-            // But `history` prop is what is shown.
-            // If we want to download what is shown but filtered by date, we could filter client-side if we had all data.
-            // But we don't have all data (pagination).
-            // So we fetch from backend.
-            // We need to know if we are in "Global" or "Lead" mode.
-            // leadName is passed. We don't have leadId passed to RightSidebar.
-            // Let's update the interface to accept leadId if needed, OR just download global if no leadName.
-            // Wait, App.tsx passes `leadName={leads.find(l => l.isSelected)?.name}`.
-            // We should probably pass leadId too to be precise.
-            // For now, let's implement the fetch. If leadName is present, we might need to filter by it in the backend response
-            // OR we update App.tsx to pass leadId.
-            // Let's assume Global for now or filter client side if the backend returns everything (which it does for now).
-
             const filteredItems = await getHistoryFromNotionDatabase(undefined, startDate, endDate);
 
             // Generate CSV
@@ -118,9 +107,25 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ history, isOpen, onClose, l
                             {leadName}
                         </div>
                     ) : (
-                        <div className="w-full bg-white/5 border border-white/5 rounded-lg text-gray-500 text-xs px-4 py-3 flex items-center justify-center opacity-70">
-                            <span className="material-symbols-outlined text-[16px] mr-2">public</span>
-                            <span>Actividad Global</span>
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="material-symbols-outlined text-gray-400 text-[16px]">search</span>
+                            </div>
+                            <select
+                                value={filterClient}
+                                onChange={(e) => setFilterClient(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-lg text-white text-xs pl-9 pr-4 py-3 appearance-none outline-none focus:border-blue-500/50 focus:bg-black/60 transition-all cursor-pointer"
+                            >
+                                <option value="">Actividad Global</option>
+                                {uniqueClients.map(client => (
+                                    <option key={client} value={client} className="bg-gray-900 text-white">
+                                        {client}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                <span className="material-symbols-outlined text-gray-500 text-[16px]">arrow_drop_down</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -173,7 +178,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ history, isOpen, onClose, l
                         {/* Main vertical line for timeline */}
                         <div className="absolute left-[15px] top-2 bottom-4 w-px bg-gradient-to-b from-white/10 to-transparent"></div>
 
-                        {history.map((item, index) => {
+                        {displayedHistory.map((item, index) => {
                             const styles = getIconForType(item.type);
                             return (
                                 <div key={item.id} className="flex gap-4 mb-6 relative group">
