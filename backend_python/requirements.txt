@@ -1,0 +1,8 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+python-dotenv==1.0.1
+notion-client==2.2.1
+tortoise-orm==0.20.0
+httpx==0.26.0
+pydantic==2.6.0
+gunicorn==21.2.0

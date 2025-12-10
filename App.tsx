@@ -17,8 +17,8 @@ import {
     updateLeadClass
 } from './services/notionService';
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import Login from './components/Login';
+// import { GoogleOAuthProvider } from '@react-oauth/google';
+// import Login from './components/Login';
 
 // Initial Mock Data (Fallback)
 const FALLBACK_LEADS: Lead[] = [];
@@ -321,44 +321,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     );
 };
 
-const AppContent: React.FC = () => {
-    const [user, setUser] = useState<any>(null);
-
-    // Check for existing session (optional, for persistence)
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user_session');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    }, []);
-
-    const handleLogin = (userData: any) => {
-        setUser(userData);
-        localStorage.setItem('user_session', JSON.stringify(userData));
-    };
-
-    const handleLogout = () => {
-        setUser(null);
-        localStorage.removeItem('user_session');
-    };
-
-    if (!user) {
-        return <Login onLoginSuccess={handleLogin} />;
-    }
-
-    return <Dashboard user={user} onLogout={handleLogout} />;
-};
-
 const App: React.FC = () => {
-    // IMPORTANTE: Reemplazar con tu Client ID real de Google Cloud Console
-    // El usuario debe poner esto en su .env como VITE_GOOGLE_CLIENT_ID
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "TU_CLIENT_ID_AQUI";
+    // Auth removed as per user request
+    const mockUser = { name: "Usuario", email: "admin@erp.com" }; // User placeholder
 
-    return (
-        <GoogleOAuthProvider clientId={clientId}>
-            <AppContent />
-        </GoogleOAuthProvider>
-    );
+    return <Dashboard user={mockUser} onLogout={() => console.log("Logout disabled")} />;
 };
 
 export default App;

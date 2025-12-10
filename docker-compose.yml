@@ -13,12 +13,12 @@ services:
     restart: always
 
   backend:
-    build: ./backend
+    build: ./backend_python
     ports:
-      - "3001:3001"
+      - "8000:8000"
     environment:
       - NOTION_API_KEY=${VITE_NOTION_API_KEY}
       - NOTION_DATABASE_ID=${VITE_NOTION_DATABASE_ID}
       - NOTION_HISTORY_DB_ID=${VITE_NOTION_HISTORY_DB_ID}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      # Google Auth removed as per requirement
     restart: always
