@@ -1,7 +1,11 @@
 import React from 'react';
+import './src/index.css';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
+
+import { AppProvider } from './contexts/AppContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,7 +16,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <ToastProvider>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </ToastProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

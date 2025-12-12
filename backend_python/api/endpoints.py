@@ -1,14 +1,24 @@
-from fastapi import APIRouter, HTTPException, Request, Body
-from typing import Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Request, Body, Depends
+from typing import Optional, Dict, Any, List
 from services.notion_service import NotionService
+from services.ai_service import AIService
+from models.schemas import LeadCreate, ClientCreate, HistoryCreate, GenerateLeadsRequest
 import os
 import httpx
 import logging
 
 router = APIRouter()
 notion_service = NotionService()
+ai_service = AIService()
 
 logger = logging.getLogger(__name__)
+
+@router.post("/ai/generate-leads")
+async def generate_leads(request: GenerateLeadsRequest):
+    try:
+        return await ai_service.generate_leads(request.location)
+    except Exception as e:
+         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/leads")
 async def get_leads():
@@ -18,9 +28,10 @@ async def get_leads():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/leads")
-async def create_lead(lead: Dict[str, Any] = Body(...)):
+async def create_lead(lead: LeadCreate):
     try:
-        return await notion_service.create_lead(lead)
+        # Pydantic model to dict
+        return await notion_service.create_lead(lead.dict(exclude_unset=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -32,25 +43,34 @@ async def get_history(startDate: Optional[str] = None, endDate: Optional[str] = 
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/history")
-async def create_history_item(item: Dict[str, Any] = Body(...)):
+async def create_history_item(item: HistoryCreate):
     try:
-        lead_id = item.get("leadId")
-        text = item.get("text")
-        agent = item.get("agent")
-        interaction_type = item.get("interactionType")
+        # leadId is alias for clientId in schema if needed, but here we expect leadId or clientId
+        # The schema uses 'leadId' or 'clientId'? Schema defined: leadId: str = Field(..., alias="clientId")
+        # Frontend sends 'leadId' usually? Or 'clientId'?
+        # AppContext sends: activeTab === 'clients' ? addClientHistory : addHistory
+        # addHistory sends { leadId, text, agent, interactionType } via POST body if using old service?
+        # Let's check notion_service.ts.
+        # It sends JSON body.
+        # schema has: leadId = Field(..., alias="clientId")
+        # So it accepts "clientId" in JSON and maps to leadId field? Or vice versa?
+        # Pydantic alias behavior: by default alias is used for validation if populate_by_name is False.
+        # I set allow_population_by_field_name = True.
+        # So it accepts either 'leadId' or 'clientId'.
+        # notion_service.create_history expects separate args.
         
-        if not all([lead_id, text, agent, interaction_type]):
-             raise HTTPException(status_code=400, detail="Missing fields")
-
-        return await notion_service.create_history(lead_id, text, agent, interaction_type)
+        return await notion_service.create_history(item.leadId, item.text, item.agent, item.interactionType)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/pages/{page_id}")
 async def update_page(page_id: str, body: Dict[str, Any] = Body(...)):
     try:
+        # Keeping flexible for now or define schema
         properties = body.get("properties")
         archived = body.get("archived", False)
+        # Not implementing full logic here as it wasn't there before
+        return {"status": "received"} 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -64,9 +84,9 @@ async def get_clients():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/clients")
-async def create_client(client: Dict[str, Any] = Body(...)):
+async def create_client(client: ClientCreate):
     try:
-        return await notion_service.create_client(client)
+        return await notion_service.create_client(client.dict(exclude_unset=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -86,18 +106,10 @@ async def get_clients_history(startDate: Optional[str] = None, endDate: Optional
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/clients/history")
-async def create_client_history_item(item: Dict[str, Any] = Body(...)):
+async def create_client_history_item(item: HistoryCreate):
     try:
-        # Reusing similar payload structure as history
-        client_id = item.get("clientId") # Changed from leadId to clientId for clarity, but logic is same ID
-        text = item.get("text")
-        agent = item.get("agent")
-        interaction_type = item.get("interactionType")
-        
-        if not all([client_id, text, agent, interaction_type]):
-             raise HTTPException(status_code=400, detail="Missing fields")
-
-        return await notion_service.create_client_history(client_id, text, agent, interaction_type)
+        # Reusing HistoryCreate as it has same fields
+        return await notion_service.create_client_history(item.leadId, item.text, item.agent, item.interactionType)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -4,6 +4,10 @@
 
 This project has been migrated from a Node.js backend to a Python environment using **FastAPI** and **Tortoise ORM**.
 
+> **📘 ¿Nuevo en el proyecto?**
+> Para una introducción conceptual y guía de aprendizaje paso a paso, consulta el **[Manual de Aprendizaje (MANUAL_APRENDIZAJE.md)](./MANUAL_APRENDIZAJE.md)**.
+> Este manual te guiará desde la instalación hasta el dominio del sistema con un enfoque educativo.
+
 ### Architecture Overview
 
 -   **Frontend**: React + TypeScript + Vite (Port 80/8081 via Nginx)

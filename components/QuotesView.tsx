@@ -217,7 +217,7 @@ const QuotesView: React.FC<QuotesViewProps> = ({ leads }) => {
     const labelClass = "text-xs font-bold text-white uppercase tracking-wide mb-1 block";
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-8 animate-in fade-in duration-500 scroll-smooth pb-40">
+        <div className="flex-1 h-full overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-8 animate-in fade-in duration-500 scroll-smooth pb-40">
 
             {/* SECTION: NEW QUOTE FORM */}
             <section className="fade-in-up" style={{ animationDelay: '0.1s' }}>

@@ -6,3 +6,5 @@ tortoise-orm==0.20.0
 httpx==0.26.0
 pydantic==2.6.0
 gunicorn==21.2.0
+google-generativeai==0.3.2
+email-validator==2.1.0.post1
