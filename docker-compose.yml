@@ -1,28 +1,27 @@
-version: '3.8'
-
 services:
-  erp-dashboard:
-    build:
-      context: .
-      args:
-        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+  web:
+    build: .
     ports:
-      - "8081:80"
+      - "8082:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    container_name: proyecto-1-web
     depends_on:
       - backend
-    restart: always
 
   backend:
     build: ./backend_python
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
-      - NOTION_API_KEY=${VITE_NOTION_API_KEY}
-      - NOTION_DATABASE_ID=${VITE_NOTION_DATABASE_ID}
-      - NOTION_HISTORY_DB_ID=${VITE_NOTION_HISTORY_DB_ID}
-      - NOTION_CLIENTS_DB_ID=${VITE_NOTION_CLIENTS_DB_ID}
-      - NOTION_CLIENTS_HISTORY_DB_ID=${VITE_NOTION_CLIENTS_HISTORY_DB_ID}
-      - NOTION_SUPPORT_DB_ID=${VITE_NOTION_SUPPORT_DB_ID}
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - NOTION_HISTORY_DB_ID=${NOTION_HISTORY_DB_ID}
+      - NOTION_CLIENTS_DB_ID=${NOTION_CLIENTS_DB_ID}
+      - NOTION_CLIENTS_HISTORY_DB_ID=${NOTION_CLIENTS_HISTORY_DB_ID}
+      - NOTION_SUPPORT_DB_ID=${NOTION_SUPPORT_DB_ID}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      # Google Auth removed as per requirement
-    restart: always
+    container_name: proyecto-1-backend

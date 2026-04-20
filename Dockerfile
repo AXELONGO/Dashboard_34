@@ -1,38 +1,16 @@
-# Stage 1: Build the React application
-FROM node:20-alpine as build
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available)
+# Install dependencies first for caching
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
-
-# Build arguments
-ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
-
-# Copy the rest of the application code
+# Copy the rest of the application
 COPY . .
 
-# Build the application
-RUN npm run build
+# Expose Vite port
+EXPOSE 5173
 
-# Stage 2: Serve the application with Nginx
-FROM nginx:alpine
-
-# Copy the build output from the previous stage to the Nginx html directory
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Fix for weird build output structure where index.html ends up in /app/
-RUN if [ -f /usr/share/nginx/html/app/index.html ]; then mv /usr/share/nginx/html/app/index.html /usr/share/nginx/html/index.html; fi
-
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port 80
-EXPOSE 80
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Run development server
+CMD ["npm", "run", "dev", "--", "--host"]
