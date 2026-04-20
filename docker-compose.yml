@@ -13,7 +13,7 @@ services:
       - backend
 
   backend:
-    build: ./backend_python
+    build: ./backend_react
     ports:
       - "8001:8000"
     environment:
@@ -24,4 +24,4 @@ services:
       - NOTION_CLIENTS_HISTORY_DB_ID=${NOTION_CLIENTS_HISTORY_DB_ID}
       - NOTION_SUPPORT_DB_ID=${NOTION_SUPPORT_DB_ID}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    container_name: proyecto-1-backend
+    container_name: proyecto-1-backend-react
